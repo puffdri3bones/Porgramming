@@ -1074,7 +1074,7 @@ void filter_by_branch(){
     cout << "Enter Branch Code: ";
     cin >> code;
 
-    ifstream file("customers");
+    ifstream file("customers.dat");
 
     string file_acc, name, sa_id, contact, email,
            address, dob, type, balance,
@@ -1116,10 +1116,107 @@ void filter_by_branch(){
 
 }
 
+void daily_transaction_report(){
+
+    ifstream file("transactions.dat");
+
+    string line;
+
+    cout << "---Daily Transaction Report---" << "\n";
+
+    bool has_data = false;
+
+    while (getline(file, line)){
+
+        cout << line << "\n";
+        has_data = true;
+
+    }
+
+    if (!has_data){
+
+        cout << "No Transactions Found" << "\n";
+    }
+
+}
+
+void customer_summary(){
+
+    ifstream file("customers.dat");
+
+    string file_acc, name, sa_id, contact, email,
+           address, dob, type, balance,
+           branch, pin_salt, pin_hash;
+
+    cout << "Customer Account Transactions" << "\n";
+
+    while (getline(file, file_acc) &&
+           getline(file, name) &&
+           getline(file, sa_id) &&
+           getline(file, contact) &&
+           getline(file, email) &&
+           getline(file, address) &&
+           getline(file, dob) &&
+           getline(file, type) &&
+           getline(file, balance) &&
+           getline(file, branch) &&
+           getline(file, pin_salt) &&
+           getline(file, pin_hash)){
+
+        cout << "Account: " << file_acc << "\n";
+        cout << "Name: " << name << "\n";
+        cout << "Type" << type << "\n";
+        cout << "Balance: R" << balance << "\n";
+        cout << "Branch: " << branch << "\n";
+        cout << "" << "\n";
+           }
+
+}
+
+void branch_report(string branch_code){
+
+    ifstream file("customers.dat");
+
+    string file_acc, name, sa_id, contact, email,
+           address, dob, type, balance,
+           branch, pin_salt, pin_hash;
+
+    int count = 0;
+    double total_balance = 0;
+
+    while (getline(file, file_acc) &&
+           getline(file, name) &&
+           getline(file, sa_id) &&
+           getline(file, contact) &&
+           getline(file, email) &&
+           getline(file, address) &&
+           getline(file, dob) &&
+           getline(file, type) &&
+           getline(file, balance) &&
+           getline(file, branch) &&
+           getline(file, pin_salt) &&
+           getline(file, pin_hash)){
+
+        if (branch == branch_code){
+
+            count++;
+            total_balance += stod(balance);
+        }
+           }
+
+        cout << "---Branch Report---" << "\n";
+
+        cout << "Branch: " << branch_code << "\n";
+
+        cout << "Total Customers : " << count << "\n";
+
+        cout << "Total Deposits: R" << total_balance << "\n";
+
+
+
+}
 
 int main(){
-
-
 
     bool run = true;
 
@@ -1203,7 +1300,8 @@ int main(){
                         cout << "7. Compare Branches" << "\n";
                         cout << "8. Apply Interest" << "\n";
                         cout << "9. Search For Customer" << "\n";
-                        cout << "10. Logout" << "\n";
+                        cout << "10. Reports Menu" << "\n";
+                        cout << "11. Logout" << "\n";
 
                         cin >> choices;
 
@@ -1285,7 +1383,14 @@ int main(){
 
                             compare_branches();
 
+                        }else if(choices == 8){
+
+                        }else if(choices == 9){
+
                         }else if(choices == 10){
+
+
+                        }else if(choices == 11){
 
                             teller_session = false;
                             cout << "Logging Out" << "\n";
