@@ -5,6 +5,7 @@
 #include <random>
 #include <cstdio>
 #include <vector>
+#include <iomanip>
 
 
 using namespace std;
@@ -33,7 +34,7 @@ class Teller{
         string full_name;
         string password;
         string branch_code;
-     
+
 };
 
 class Account{
@@ -119,7 +120,7 @@ int create_teller_account(){
 
     string salted = my_obj.password + salt;
 
-    hash<string> pass_hash;    
+    hash<string> pass_hash;
 
     size_t hashed_password = pass_hash(salted);
 
@@ -141,10 +142,38 @@ int create_teller_account(){
     return hashed_password;
 }
 
-string gen_acc_numb(string branch_code){
-    static int counter = 1000;
+int load_counter(){
+    ifstream file("counter.dat");
+    int counter = 1000;
 
-    return "ACC-" + branch_code + "-" + to_string(counter++);
+    if(file.is_open()){
+        file >> counter;
+        file.close();
+    }
+
+    if(counter < 1000){
+        counter = 1000;
+    }
+
+    return counter;
+}
+
+void save_counter(int counter){
+    ofstream file("counter.dat");
+    if(file.is_open()){
+        file << counter;
+        file.close();
+    }
+}
+
+string gen_acc_numb(string branch_code){
+    static int counter = load_counter();
+
+    string result = "ACC-" + branch_code + "-" + to_string(counter++);
+
+    counter++;
+    save_counter(counter);
+    return result;
 }
 
 string gen_pin(){
@@ -215,6 +244,8 @@ void register_cust(string branch_code){
     acc -> branch_code = branch_code;
     acc -> account_number = gen_acc_numb(branch_code);
 
+    cout << "Created Account: " << acc -> account_number << "\n";
+
     double min_deposit = acc -> get_min_deposit();
 
     do{cout << "Initial Deposit: (Min: " << min_deposit << "): " << "\n";
@@ -266,9 +297,9 @@ bool login_customer(string & acc_no){
 
         ifstream file("customers.dat");
 
-        string file_acc, name, id, contact, email, 
+        string file_acc, name, id, contact, email,
         address, dob, type,
-        balance, branch, pin_salt, pin_hash; 
+        balance, branch, pin_salt, pin_hash;
 
         bool found = false;
 
@@ -394,6 +425,9 @@ void view_balance(string acc_no, string pin){
 
                 if (attempt == pin_hash){
 
+
+
+                    std::cout << std::fixed << std::setprecision(3);
                     cout << "Balance: R" << balance<< "\n";
                 }else{
                     cout << "Invalid PIN" << "\n";
@@ -458,14 +492,16 @@ void deposit(string acc_no){
 
                 found = true;
 
+
+
                 double current_balance = stod(balance);
                 current_balance += amount;
 
                 balance = to_string(current_balance);
 
                 cout << "Deposit Successful" << "\n";
-                cout << "New Balanace: " << balance << "\n";
-                
+                cout << "New Balanace: R" << balance << "\n";
+
             }
 
             temp << file_acc << "\n"
@@ -502,7 +538,7 @@ void deposit(string acc_no){
 void withdraw(string acc_no){
 
     double amount;
-    cout << "Enter Deposit Amount: " << "\n";
+    cout << "Enter Withdrawal Amount: " << "\n";
     cin >> amount;
 
     if (amount <= 0){
@@ -549,9 +585,9 @@ void withdraw(string acc_no){
 
                 }else{
 
-                    cout << "Insufficient Funds!!!" << "\n"; 
+                    cout << "Insufficient Funds!!!" << "\n";
                 }
-      
+
             }
 
             temp << file_acc << "\n"
@@ -703,6 +739,115 @@ void transfer(string sender_acc){
 
 }
 
+bool verify_pin(string acc_no, string pin){
+
+    ifstream file("customers.dat");
+
+    string file_acc, name, sa_id, contact, email,
+           address, dob, type, balance,
+           branch, pin_salt, pin_hash;
+
+        while (getline(file, file_acc) &&
+           getline(file, name) &&
+           getline(file, sa_id) &&
+           getline(file, contact) &&
+           getline(file, email) &&
+           getline(file, address) &&
+           getline(file, dob) &&
+           getline(file, type) &&
+           getline(file, balance) &&
+           getline(file, branch) &&
+           getline(file, pin_salt) &&
+           getline(file, pin_hash)){
+
+        if (file_acc == acc_no){
+
+            hash<string> hasher;
+            string attempt = to_string(hasher(pin + pin_salt));
+
+            return attempt == pin_hash;
+        }
+
+
+    }
+
+    return false;
+
+}
+
+void change_pin(string acc_no, string old_pin, string new_pin){
+
+    if(!verify_pin(acc_no, old_pin)){
+        cout << "Invalid Current PIN" << "\n";
+        return;
+    }
+
+    if(new_pin.length() != 5 || !all_of(new_pin.begin(), new_pin.end(), ::isdigit)){
+        cout << "PIN must be 5 digits!!!" << "\n";
+        return;
+    }
+
+
+
+    ifstream file("customers.dat");
+    ofstream temp("temp.dat");
+
+    string file_acc, name, sa_id, contact, email,
+           address, dob, type, balance,
+           branch, pin_salt, pin_hash;
+
+    bool found = false;
+
+    while (getline(file, file_acc) &&
+           getline(file, name) &&
+           getline(file, sa_id) &&
+           getline(file, contact) &&
+           getline(file, email) &&
+           getline(file, address) &&
+           getline(file, dob) &&
+           getline(file, type) &&
+           getline(file, balance) &&
+           getline(file, branch) &&
+           getline(file, pin_salt) &&
+           getline(file, pin_hash)){
+
+        if(file_acc == acc_no){
+
+            found = true;
+
+            hash<string> hasher;
+            pin_hash = to_string(hasher(new_pin + pin_salt));
+            cout << "PIN Changed Successfully" << "\n";
+
+        }
+
+        temp << file_acc << "\n"
+                 << name << "\n"
+                 << sa_id << "\n"
+                 << contact << "\n"
+                 << email << "\n"
+                 << address << "\n"
+                 << dob << "\n"
+                 << type << "\n"
+                 << balance << "\n"
+                 << branch << "\n"
+                 << pin_salt << "\n"
+                 << pin_hash << "\n";
+
+    }
+
+    file.close();
+    temp.close();
+
+    if(found){
+        remove("customers.dat");
+        rename("temp.dat", "customers.dat");
+    }else{
+        remove("temp.dat");
+        cout << "Account Not Found!!!" << "\n";
+    }
+}
+
 
 void view_statement(string acc_no){
 
@@ -737,7 +882,7 @@ void view_statement(string acc_no){
             cout << "Contact: " << contact << "\n";
             cout << "Email: " << email << "\n";
             cout << "Account Type: " << type << "\n";
-            cout << "Branch" << branch << "\n";
+            cout << "Branch: " << branch << "\n";
             cout << "Balance: R" << balance << "\n";
 
             ifstream trans("transactions.dat");
@@ -766,7 +911,7 @@ void view_statement(string acc_no){
 
         }
 
-        
+
     }
 
     if (!found){
@@ -828,30 +973,26 @@ void compare_branches(){
            getline(file, pin_salt) &&
            getline(file, pin_hash)){
 
-        if (branch == "B01"){
+        if (branch == "B001"){
 
             b1++;
 
-        }else if(branch == "B02"){
+        }else if(branch == "B002"){
 
             b2++;
 
-        }else if(branch == "B03"){
+        }else if(branch == "B003"){
 
             b3++;
 
         }
 
-        cout << "---Branch Comparison---" << "\n";
-        cout << "B01 Customers: " << b1 << "\n";
-        cout << "B02 Customers: " << b2 << "\n";
-        cout << "B03" << b3 << "\n";
-
-
     }
 
-
-
+cout << "---Branch Comparison---" << "\n";
+cout << "B001 Customers: " << b1 << "\n";
+cout << "B002 Customers: " << b2 << "\n";
+cout << "B003 Customers: " << b3 << "\n";
 
 }
 
@@ -880,41 +1021,7 @@ double calc_interest(string type, double balance){
     return balance * rate;
 }
 
-bool verify_pin(string acc_no, string pin){
 
-    ifstream file("customers.dat");
-
-    string file_acc, name, sa_id, contact, email,
-           address, dob, type, balance,
-           branch, pin_salt, pin_hash;
-
-        while (getline(file, file_acc) &&
-           getline(file, name) &&
-           getline(file, sa_id) &&
-           getline(file, contact) &&
-           getline(file, email) &&
-           getline(file, address) &&
-           getline(file, dob) &&
-           getline(file, type) &&
-           getline(file, balance) &&
-           getline(file, branch) &&
-           getline(file, pin_salt) &&
-           getline(file, pin_hash)){
-
-        if (file_acc == acc_no){
-
-            hash<string> hasher;
-            string attempt = to_string(hasher(pin + pin_salt));
-
-            return attempt == pin_hash;
-        }
-
-
-    }
-
-    return false;
-
-}
 
 void apply_interest(){
 
@@ -1216,7 +1323,90 @@ void branch_report(string branch_code){
 
 }
 
+void reports_menu(){
+
+  int choice;
+  cout << "Daily Transactions " << "\n";
+  cout << "Customer Summary" << "\n";
+  cout << "Branch Report" << "\n";
+  cin >> choice;
+
+  if (choice == 1){
+
+    daily_transaction_report();
+
+  }else if (choice == 2){
+
+    customer_summary();
+
+  }else if (choice == 3){
+
+    string code;
+    cout << "Enter Branch Code: ";
+    cin >> code;
+
+    branch_report(code);
+
+  }
+
+}
+
+
+void save_branches(vector<Branch> &branches){
+
+    ofstream file("branches.dat");
+
+    for(auto &b : branches){
+
+        file << b.code << "\n";
+        file << b.name << "\n";
+        file << b.location << "\n";
+    }
+
+    file.close();
+
+    cout << "Branches saved successfully" << "\n";
+}
+
+
+void load_branches(vector<Branch> &branches){
+
+  ifstream file("branches.dat");
+
+  if(!file.is_open()){
+
+    cout << "branches.dat not found" << "\n";
+    return;
+  }
+
+  Branch b;
+  branches.clear();
+
+  while(getline(file, b.code) &&
+        getline(file, b.name) &&
+        getline(file, b.location)){
+
+          branches.push_back(b);
+        }
+
+        file.close();
+
+}
+
+
 int main(){
+
+    ifstream test("branches.dat");
+
+    if(!test.good()){
+
+      save_branches(branches);
+
+    }
+
+    test.close();
+
+    load_branches(branches);
 
     bool run = true;
 
@@ -1238,13 +1428,13 @@ int main(){
 
         if (choice == 1){
 
-           
+
             create_teller_account();
-           
+
 
         }else if(choice == 2){
 
-            string identify; 
+            string identify;
             string pass_word;
 
             cout << "Please Enter ID & Password Below: " << "\n";
@@ -1272,8 +1462,8 @@ int main(){
 
             string file_id, file_name, file_salt, file_password, file_branch;
 
-            while (getline(file, file_id) && 
-                   getline(file, file_name) && 
+            while (getline(file, file_id) &&
+                   getline(file, file_name) &&
                    getline(file, file_salt) &&
                    getline(file, file_password) &&
                    getline(file, file_branch)){
@@ -1385,10 +1575,31 @@ int main(){
 
                         }else if(choices == 8){
 
+                            apply_interest();
+
                         }else if(choices == 9){
+
+                            int search_choice;
+                            cout << "---Search Menu---" << "\n";
+                            cout << "1. Search using Account Number" << "\n";
+                            cout << "2. Search using Name" << "\n";
+                            cout << "3. Filter using Branch" << "\n";
+                            cout << "Enter Choice: " << "\n";
+                            cin >> search_choice;
+
+                            if(search_choice == 1){
+                                search_by_account();
+                            }else if(search_choice == 2){
+                                search_by_name();
+                            }else if(search_choice == 3){
+                                filter_by_branch();
+                            }else{
+                                cout << "Invalid Choice!!!" << "\n";
+                            }
 
                         }else if(choices == 10){
 
+                          reports_menu();
 
                         }else if(choices == 11){
 
@@ -1402,10 +1613,10 @@ int main(){
                         }
                     }
 
-                    break; 
-                            
-                } 
-        
+                    break;
+
+                }
+
                     }
             if (!found){
 
@@ -1415,7 +1626,7 @@ int main(){
             }else if(choice == 3){
 
                 string acc_no;
-                
+
                 if (login_customer(acc_no)){
 
                     bool session = true;
@@ -1430,7 +1641,8 @@ int main(){
                         cout << "3. Withdraw" << "\n";
                         cout << "4. Transfer" << "\n";
                         cout << "5. View Statement" << "\n";
-                        cout << "6. Logout" << "\n";
+                        cout << "6. Change PIN" << "\n";
+                        cout << "7. Logout" << "\n";
 
                         cin >> opt;
 
@@ -1486,6 +1698,19 @@ int main(){
 
                         }else if(opt == 6){
 
+                            string old_pin;
+                            string new_pin;
+
+                            cout << "Enter Current PIN" << "\n";
+                            cin >> old_pin;
+
+                            cout << "Enter New PIN (5 digits): " << "\n";
+                            cin >> new_pin;
+
+                            change_pin(acc_no, old_pin, new_pin);
+
+                        }else if(opt == 7){
+
                             session = false;
 
                         }
@@ -1499,8 +1724,8 @@ int main(){
             run = false;
 
         }
-        
+
     }
-   
+
     return 0;
 }
